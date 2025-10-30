@@ -2,8 +2,6 @@ import express from 'express'
 import cors from 'cors'
 import { request } from 'undici'
 import { URL } from 'node:url'
-import dotenv from 'dotenv'
-dotenv.config()
 import nodemailer from 'nodemailer'
 
 const app = express()

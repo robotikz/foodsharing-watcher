@@ -7,22 +7,26 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
+    "lint": "eslint src --ext .js,.jsx",
+    "env": "npx env-cmd -f .env printenv",
+    "test-email": "curl -X POST http://localhost:8787/notify-email -H \"Content-Type: application/json\" -d '{\"subject\":\"Test\",\"text\":\"Test message from script\"}'",
     "proxy": "node --env-file=.env server/proxy.mjs",
     "start": "concurrently -k \"npm:proxy\" \"npm:dev\""
   },
   "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.19.2",
+    "nodemailer": "^7.0.10",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "express": "^4.19.2",
-    "cors": "^2.8.5",
     "undici": "^6.19.8"
   },
   "devDependencies": {
     "@vitejs/plugin-react-swc": "^3.7.1",
-    "vite": "^5.4.10",
-    "tailwindcss": "^3.4.15",
-    "postcss": "^8.4.47",
     "autoprefixer": "^10.4.20",
-    "concurrently": "^9.1.0"
+    "concurrently": "^9.1.0",
+    "postcss": "^8.4.47",
+    "tailwindcss": "^3.4.15",
+    "vite": "^5.4.10"
   }
 }
