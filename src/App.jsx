@@ -336,16 +336,19 @@ export default function App() {
               const { free, occupied } = computeAvailability(p)
               const hasFree = (p.isAvailable ?? false) || free > 0
               const isEmpty = p.occupiedSlots && p.occupiedSlots.length === 0
+              const d = new Date(p.date)
+              const isMonday = d.getDay() === 1
+              const ringClass = isMonday
+                ? 'ring-4 ring-orange-600'
+                : isEmpty
+                ? 'ring-4 ring-red-600'
+                : hasFree
+                ? 'ring-4 ring-green-500'
+                : ''
               return (
                 <article
                   key={idx}
-                  className={`rounded-2xl border p-4 bg-white shadow ${
-                    isEmpty
-                      ? 'ring-2 ring-red-500'
-                      : hasFree
-                      ? 'ring-2 ring-green-500'
-                      : ''
-                  }`}
+                  className={`rounded-2xl border p-4 bg-white shadow ${ringClass}`}
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div>

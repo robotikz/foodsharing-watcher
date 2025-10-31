@@ -23,7 +23,8 @@
     "emulate": "firebase emulators:start --project foodsharing-watcher",
     "emulate:functions": "firebase emulators:start --only functions --project foodsharing-watcher",
     "proxy": "node --env-file=.env server/local.mjs",
-    "start": "concurrently -k \"npm:proxy\" \"npm:dev\""
+    "start": "concurrently -k \"npm:proxy\" \"npm:dev\"",
+    "icons:gen": "node scripts/gen-icons.mjs"
   },
   "dependencies": {
     "cors": "^2.8.5",
@@ -43,6 +44,8 @@
     "postcss": "^8.4.47",
     "tailwindcss": "^3.4.15",
     "vite": "^7.1.12",
-    "vite-plugin-pwa": "^1.1.0"
+    "vite-plugin-pwa": "^0.20.5",
+    "sharp": "^0.33.5",
+    "png-to-ico": "^2.1.8"
   }
 }
