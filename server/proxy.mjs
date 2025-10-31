@@ -3,6 +3,7 @@ import cors from 'cors'
 import { request } from 'undici'
 import { URL } from 'node:url'
 import nodemailer from 'nodemailer'
+import { onRequest } from 'firebase-functions/v2/https'
 
 const app = express()
 const PORT = process.env.PORT || 8787
@@ -200,6 +201,8 @@ app.post('/notify-email', async (req, res) => {
   }
 });
 
-app.listen(PORT, () => {
-  console.log(`[proxy] listening on http://localhost:${PORT}`)
-})
+// Firebase HTTPS Function export (region: europe-west3 = Frankfurt)
+export const proxy = onRequest({ region: 'europe-west3' }, app)
+
+// Export app for local runner
+export default app
