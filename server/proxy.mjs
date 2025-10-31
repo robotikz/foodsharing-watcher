@@ -12,12 +12,24 @@ const TARGET_HOST = 'foodsharing.de'
 
 app.use(express.json()); // for parsing JSON body on POST
 
-app.use(cors({
-  origin: (origin, cb) => cb(null, ALLOW_ORIGINS === '*' ? true : (ALLOW_ORIGINS.split(',').includes(origin))),
-  credentials: false,
-}))
+// Global CORS headers (explicit) and preflight handler
+app.use((req, res, next) => {
+  res.set('Access-Control-Allow-Origin', '*')
+  res.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
+  res.set('Access-Control-Allow-Headers', 'Content-Type, X-CSRF-Token, Accept')
+  res.set('Access-Control-Max-Age', '3600')
+  if (req.method === 'OPTIONS') {
+    return res.status(204).send('')
+  }
+  next()
+})
+
+// CORS: allow all origins and handle preflight
+app.use(cors({ origin: true, credentials: false }))
+app.options('*', cors({ origin: true, credentials: false }))
 
 app.get('/healthz', (req, res) => res.json({ ok: true }))
+app.get('/', (req, res) => res.json({ ok: true, path: '/' }))
 
 // GET-only proxy: /proxy?url=https://foodsharing.de/api/stores/29441/pickups
 app.get('/proxy', async (req, res) => {
@@ -201,8 +213,24 @@ app.post('/notify-email', async (req, res) => {
   }
 });
 
-// Firebase HTTPS Function export (region: europe-west3 = Frankfurt)
-export const proxy = onRequest({ region: 'europe-west3' }, app)
+// Explicit preflights (kept for clarity)
+app.options('/proxy', cors({ origin: true, credentials: false }))
+app.options('/notify-email', cors({ origin: true, credentials: false }))
+
+// Firebase HTTPS Function export (region: europe-west3 = Frankfurt) with declared secrets
+export const proxy = onRequest({
+  region: 'europe-west3',
+  secrets: [
+    'FOODWATCH_LOGIN_EMAIL',
+    'FOODWATCH_LOGIN_PASSWORD',
+    'FOODWATCH_SMTP_HOST',
+    'FOODWATCH_SMTP_PORT',
+    'FOODWATCH_SMTP_USER',
+    'FOODWATCH_SMTP_PASS',
+    'FOODWATCH_NOTIFY_FROM',
+    'FOODWATCH_NOTIFY_TO',
+  ],
+}, app)
 
 // Export app for local runner
 export default app

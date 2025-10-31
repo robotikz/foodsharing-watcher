@@ -59,7 +59,10 @@ function parseHeaders(jsonLike) {
 
 export default function App() {
   const [storeId, setStoreId] = useState(() => localStorage.getItem(LS_KEYS.storeId) || '29441,29438')
-  const [proxyUrl, setProxyUrl] = useState(() => localStorage.getItem(LS_KEYS.proxyUrl) || 'http://localhost:8787/proxy')
+  const defaultProxyUrl = (import.meta?.env?.VITE_PROXY_URL)
+    || (typeof window !== 'undefined' && /(?:web\.app|firebaseapp\.com)$/i.test(window.location.hostname) ? '/proxy' : undefined)
+    || 'https://proxy-v64j23y43a-ey.a.run.app/proxy'
+  const [proxyUrl, setProxyUrl] = useState(() => localStorage.getItem(LS_KEYS.proxyUrl) || defaultProxyUrl)
   const [headersInput, setHeadersInput] = useState(() => localStorage.getItem(LS_KEYS.headers) || '')
   const [pickups, setPickups] = useState([])
   const [loading, setLoading] = useState(false)
@@ -278,7 +281,7 @@ export default function App() {
                 className="mt-1 w-full rounded-xl border px-3 py-2"
                 value={proxyUrl}
                 onChange={e => setProxyUrl(e.target.value)}
-                placeholder="http://localhost:8787/proxy"
+                placeholder="https://proxy-v64j23y43a-ey.a.run.app/proxy (or http://localhost:8787/proxy)"
               />
             </label>
             <label className="block text-sm">
