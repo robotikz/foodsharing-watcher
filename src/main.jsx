@@ -4,6 +4,7 @@ import App from './App.jsx'
 import './index.css'
 import { initializeApp } from 'firebase/app'
 import { getAnalytics, isSupported as analyticsIsSupported } from 'firebase/analytics'
+import { registerSW } from 'virtual:pwa-register'
 
 const firebaseConfig = {
   apiKey: 'AIzaSyAoaWWFRD7PXyVf7vB3qNk0UL5heTuBdVw',
@@ -20,6 +21,9 @@ const appFirebase = initializeApp(firebaseConfig)
 analyticsIsSupported().then((supported) => {
   if (supported) getAnalytics(appFirebase)
 }).catch(() => {})
+
+// Register service worker (auto updates)
+registerSW({ immediate: true })
 
 const root = createRoot(document.getElementById('root'))
 root.render(<App />)

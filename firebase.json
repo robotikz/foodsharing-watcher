@@ -11,7 +11,10 @@
       "**/node_modules/**"
     ],
     "rewrites": [
-      { "source": "/proxy", "function": "proxy" }
+      { "source": "/proxy", "function": "proxy" },
+      { "source": "/proxy/**", "function": "proxy" },
+      { "source": "/healthz", "function": "proxy" },
+      { "source": "/notify-email", "function": "proxy" }
     ]
   }
 }
