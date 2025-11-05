@@ -119,6 +119,8 @@ export default function App() {
   const [lastUpdated, setLastUpdated] = useState(null)
   const [countdown, setCountdown] = useState(msUntilNextTopOfHour())
   const [showOnlyNotOccupied, setShowOnlyNotOccupied] = useState(true)
+  const [settingsCollapsed, setSettingsCollapsed] = useState(true)
+  const [statusCollapsed, setStatusCollapsed] = useState(true)
   const countdownRef = useRef(null)
   const intervalRef = useRef(null)
   // Persisted free pickup keys for new free notification
@@ -183,8 +185,8 @@ export default function App() {
         if (Notification.permission === 'granted') {
           newFreeSet.forEach(key => {
             const found = nowFree.find(p => `${p.storeId || ''}-${p.date}` === key)
-            let msg = 'New free pickup slot!'
-            if (found) msg = `New free slot: ${fmtDate(found.date)} ${found.description ? 'at ' + found.description : ''}`
+            let msg = 'Neuer freier Abhol-Slot!'
+            if (found) msg = `Neuer freier Slot: ${fmtDate(found.date)} ${found.description ? 'um ' + found.description : ''}`
             new Notification(msg)
           })
         }
@@ -194,7 +196,7 @@ export default function App() {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({
-              subject: 'New free Foodsharing pickup slots!',
+              subject: 'Neue freie Foodsharing Abhol-Slots!',
               text: newFreeSet.map(key => {
                 const found = nowFree.find(p => `${p.storeId || ''}-${p.date}` === key);
                 return found ? `${found.date}: ${found.description || ''}` : key;
@@ -265,7 +267,7 @@ export default function App() {
         <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between gap-4">
           <h1 className="text-2xl font-bold">Foodsharing Pickup Watcher</h1>
           <div className="text-sm text-slate-600">
-            Next check in <span className="font-semibold">{diffHuman(countdown)}</span>
+            Nächste Prüfung in <span className="font-semibold">{diffHuman(countdown)}</span>
           </div>
         </div>
       </header>
@@ -287,15 +289,15 @@ export default function App() {
                 </button>
               </div>
             <label className="block text-sm">
-              <span className="text-slate-600">Store IDs</span>
+              <span className="text-slate-600">Laden-IDs</span>
               <input
                 className="mt-1 w-full rounded-xl border px-3 py-2"
                 value={storeId}
                 onChange={e => setStoreId(e.target.value)}
                 inputMode="text"
-                placeholder="e.g. 29441,29438"
+                placeholder="z.B. 29441,29438"
               />
-              <span className="text-xs text-slate-500">Comma separated. Example: 29441,29438</span>
+              <span className="text-xs text-slate-500">Durch Komma getrennt. Beispiel: 29441,29438</span>
             </label>
             <div className="flex items-center gap-2 mt-2">
               <button
@@ -303,7 +305,7 @@ export default function App() {
                 className={`px-3 py-1 rounded-xl border text-sm transition ${showOnlyNotOccupied ? 'bg-green-700 text-white border-green-700' : 'bg-white hover:bg-slate-50 border-slate-300 text-slate-800'}`}
                 onClick={() => setShowOnlyNotOccupied(s => !s)}
               >
-                {showOnlyNotOccupied ? 'Show all slots' : 'Show only free slots'}
+                {showOnlyNotOccupied ? 'Alle Slots anzeigen' : 'Nur freie Slots anzeigen'}
               </button>
               <button
                 type="button"
@@ -311,18 +313,18 @@ export default function App() {
                 onClick={() => {
                   if ('Notification' in window) {
                     if (Notification.permission === 'granted') {
-                      new Notification('Test Notification: Foodsharing Pickup Watcher')
+                      new Notification('Test-Benachrichtigung: Foodsharing Abholungs-Beobachter')
                     } else if (Notification.permission === 'default') {
                       Notification.requestPermission().then(p => {
                         if (p === 'granted') {
-                          new Notification('Test Notification: Foodsharing Pickup Watcher')
+                          new Notification('Test-Benachrichtigung: Foodsharing Abholungs-Beobachter')
                         }
                       })
                     }
                   }
                 }}
               >
-                Test Push Notification
+                Push-Benachrichtigung testen
               </button>
             </div>
             <label className="block text-sm">
@@ -352,7 +354,7 @@ export default function App() {
               )}
             </label>
             <label className="block text-sm">
-              <span className="text-slate-600">Extra headers JSON (optional)</span>
+              <span className="text-slate-600">Zusätzliche Header JSON (optional)</span>
               <textarea
                 className="mt-1 w-full rounded-xl border px-3 py-2 font-mono text-xs h-28"
                 value={headersInput}
@@ -361,8 +363,8 @@ export default function App() {
               />
             </label>
             <p className="text-xs text-slate-500">
-              Tip: If you use a proxy, only forward the minimum headers required by your endpoint.
-              Avoid putting cookies or secrets directly here.
+              Tipp: Wenn Sie einen Proxy verwenden, leiten Sie nur die mindestens erforderlichen Header weiter.
+              Vermeiden Sie, Cookies oder Geheimnisse direkt hier einzufügen.
             </p>
             </div>
 
@@ -411,16 +413,20 @@ export default function App() {
               const { free, occupied } = computeAvailability(p)
               const hasFree = (p.isAvailable ?? false) || free > 0
               const isEmpty = p.occupiedSlots && p.occupiedSlots.length === 0
+              const d = new Date(p.date)
+              const isMonday = d.getDay() === 1
+              const ringClass = isMonday
+                ? 'ring-4 ring-orange-600'
+                : isEmpty
+                ? 'ring-4 ring-red-600'
+                : hasFree
+                ? 'ring-4 ring-green-500'
+                : ''
+              const bgClass = isMonday ? 'bg-yellow-50' : 'bg-white'
               return (
                 <article
                   key={idx}
-                  className={`rounded-2xl border p-4 bg-white shadow ${
-                    isEmpty
-                      ? 'ring-2 ring-red-500'
-                      : hasFree
-                      ? 'ring-2 ring-green-500'
-                      : ''
-                  }`}
+                  className={`rounded-2xl border p-4 ${bgClass} shadow ${ringClass}`}
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div>
@@ -428,18 +434,18 @@ export default function App() {
                       <p className="text-sm text-slate-600">{p.description || 'Abholung'}</p>
                     </div>
                     <div className={`px-3 py-1 rounded-full text-sm font-medium ${hasFree ? 'bg-green-100 text-green-800' : 'bg-slate-100 text-slate-700'}`}>
-                      {hasFree ? `Free: ${free}` : 'Fully booked'}
+                      {hasFree ? `Frei: ${free}` : 'Vollständig gebucht'}
                     </div>
                   </div>
 
                   <div className="mt-3 text-sm text-slate-700">
-                    <div>Total slots: <span className="font-medium">{p.totalSlots}</span></div>
-                    <div>Occupied: <span className="font-medium">{occupied}</span></div>
+                    <div>Gesamte Slots: <span className="font-medium">{p.totalSlots}</span></div>
+                    <div>Belegt: <span className="font-medium">{occupied}</span></div>
                   </div>
 
                   {p.occupiedSlots && p.occupiedSlots.length > 0 && (
                     <div className="mt-3">
-                      <h4 className="text-sm font-semibold mb-2">Participants</h4>
+                      <h4 className="text-sm font-semibold mb-2">Teilnehmer</h4>
                       <ul className="space-y-2">
                         {p.occupiedSlots.map((os, i) => (
                           <li key={i} className="flex items-center gap-3">
@@ -453,8 +459,8 @@ export default function App() {
                               <div className="w-8 h-8 rounded-full bg-slate-200" />
                             )}
                             <div>
-                              <div className="text-sm font-medium">{os.profile?.name || 'Unknown'}</div>
-                              <div className="text-xs text-slate-500">{os.isConfirmed ? 'confirmed' : 'pending'}</div>
+                              <div className="text-sm font-medium">{os.profile?.name || 'Unbekannt'}</div>
+                              <div className="text-xs text-slate-500">{os.isConfirmed ? 'bestätigt' : 'ausstehend'}</div>
                             </div>
                           </li>
                         ))}

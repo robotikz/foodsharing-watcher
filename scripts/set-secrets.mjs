@@ -33,13 +33,18 @@ function setSecret(name, value) {
       'functions:secrets:set',
       name,
       '--project', PROJECT,
-      '--value', value,
-      '--quiet',
     ]
+    // Pass value via stdin (Firebase CLI reads from stdin)
     if (process.platform === 'win32') {
-      execFileSync('cmd.exe', ['/c', firebaseBin, ...args], { stdio: 'inherit' })
+      execFileSync('cmd.exe', ['/c', firebaseBin, ...args], {
+        input: value + '\n',
+        stdio: ['pipe', 'inherit', 'inherit']
+      })
     } else {
-      execFileSync(firebaseBin, args, { stdio: 'inherit' })
+      execFileSync(firebaseBin, args, {
+        input: value + '\n',
+        stdio: ['pipe', 'inherit', 'inherit']
+      })
     }
   } catch (err) {
     console.error(`Failed setting secret ${name}:`, err?.message || err)

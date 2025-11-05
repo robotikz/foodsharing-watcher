@@ -217,7 +217,7 @@ app.post('/notify-email', async (req, res) => {
 app.options('/proxy', cors({ origin: true, credentials: false }))
 app.options('/notify-email', cors({ origin: true, credentials: false }))
 
-// Firebase HTTPS Function export (region: europe-west3 = Frankfurt) with declared secrets
+// Firebase HTTPS Function export
 export const proxy = onRequest({
   region: 'europe-west3',
   secrets: [
