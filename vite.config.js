@@ -8,7 +8,60 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
 
   return {
-    plugins: [react()],
+    plugins: [
+      react(),
+      VitePWA({
+        registerType: 'autoUpdate',
+        includeAssets: ['favicon.ico'],
+        manifest: {
+          name: 'Foodsharing Pickup Watcher',
+          short_name: 'Foodsharing',
+          description: 'Monitor Foodsharing pickup slots and get notified when free slots become available',
+          theme_color: '#0f172a',
+          background_color: '#f8fafc',
+          display: 'standalone',
+          orientation: 'portrait',
+          scope: '/',
+          start_url: '/',
+          icons: [
+            {
+              src: '/icons/pwa-192.png',
+              sizes: '192x192',
+              type: 'image/png',
+              purpose: 'any maskable'
+            },
+            {
+              src: '/icons/pwa-512.png',
+              sizes: '512x512',
+              type: 'image/png',
+              purpose: 'any maskable'
+            }
+          ]
+        },
+        workbox: {
+          globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+          runtimeCaching: [
+            {
+              urlPattern: /^https:\/\/foodsharing\.de\/.*/i,
+              handler: 'NetworkFirst',
+              options: {
+                cacheName: 'foodsharing-api-cache',
+                expiration: {
+                  maxEntries: 50,
+                  maxAgeSeconds: 60 * 60 // 1 hour
+                },
+                cacheableResponse: {
+                  statuses: [0, 200]
+                }
+              }
+            }
+          ]
+        },
+        devOptions: {
+          enabled: false // Disable PWA in dev mode for faster development
+        }
+      })
+    ],
     server: {
       port: 5173,
       strictPort: true
