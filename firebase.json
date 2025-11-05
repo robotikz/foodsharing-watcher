@@ -1,7 +1,23 @@
 {
   "functions": {
     "source": ".",
-    "runtime": "nodejs22"
+    "runtime": "nodejs22",
+    "ignore": [
+      ".env",
+      ".env.local",
+      ".git",
+      ".gitignore",
+      "node_modules",
+      "dist",
+      "build",
+      "*.log",
+      "src",
+      "public",
+      "vite.config.js",
+      "tailwind.config.js",
+      "postcss.config.js",
+      "index.html"
+    ]
   },
   "hosting": {
     "public": "dist",

@@ -1,0 +1,14 @@
+# Exclude .env from Firebase Functions deployment
+.env
+.env.local
+.env.*
+!.env.example
+
+# Other ignores
+.git
+.gitignore
+node_modules
+dist
+build
+*.log
+.firebase

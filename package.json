@@ -17,7 +17,8 @@
     "fb:use": "firebase use foodsharing-watcher",
     "secrets:set": "node --env-file=.env scripts/set-secrets.mjs",
     "secrets:set:local": "node --env-file=.env scripts/set-secrets.mjs",
-    "deploy:functions": "firebase deploy --only functions:proxy --project foodsharing-watcher",
+    "delete:functions": "firebase functions:delete proxy --region europe-west3 --project foodsharing-watcher --force",
+    "deploy:functions": "node scripts/deploy-functions.mjs",
     "deploy:hosting": "npm run build:firebase && firebase deploy --only hosting --project foodsharing-watcher",
     "deploy": "npm run build && firebase deploy --project foodsharing-watcher",
     "emulate": "firebase emulators:start --project foodsharing-watcher",
@@ -30,6 +31,7 @@
     "cors": "^2.8.5",
     "express": "^4.19.2",
     "firebase": "^12.5.0",
+    "firebase-admin": "^12.7.0",
     "firebase-functions": "^5.1.1",
     "nodemailer": "^7.0.10",
     "react": "^18.3.1",
@@ -41,11 +43,11 @@
     "autoprefixer": "^10.4.20",
     "concurrently": "^9.1.0",
     "firebase-tools": "^14.23.0",
+    "png-to-ico": "^2.1.8",
     "postcss": "^8.4.47",
+    "sharp": "^0.33.5",
     "tailwindcss": "^3.4.15",
     "vite": "^7.1.12",
-    "vite-plugin-pwa": "^0.20.5",
-    "sharp": "^0.33.5",
-    "png-to-ico": "^2.1.8"
+    "vite-plugin-pwa": "^0.21.1"
   }
 }
