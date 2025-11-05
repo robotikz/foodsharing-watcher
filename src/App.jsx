@@ -2,7 +2,6 @@ import React, { useEffect, useMemo, useRef, useState } from 'react'
 
 const LS_KEYS = {
   storeId: 'fs_store_id',
-  proxyUrl: 'fs_proxy_url',
   headers: 'fs_auth_headers',
   freeSlots: 'fs_prev_free_slots',
 }
@@ -57,12 +56,62 @@ function parseHeaders(jsonLike) {
   return undefined
 }
 
+/**
+ * Get the default proxy URL based on build mode and environment.
+ *
+ * Build modes:
+ * - local: Uses .env.local → VITE_PROXY_URL=http://localhost:8787/proxy
+ * - emulator: Uses .env.emulator → VITE_PROXY_URL=http://localhost:5001/.../proxy
+ * - firebase: Uses .env.firebase → VITE_PROXY_URL=/proxy
+ */
+function getDefaultProxyUrl() {
+  // Priority 1: Use VITE_PROXY_URL from environment (set by build mode)
+  // Vite automatically exposes VITE_* variables via import.meta.env
+  const envProxyUrl = import.meta.env.VITE_PROXY_URL
+  if (envProxyUrl) {
+    return envProxyUrl
+  }
+
+  // Priority 2: If on Firebase hosting, use relative path
+  if (typeof window !== 'undefined') {
+    const isFirebaseHosting = /(?:web\.app|firebaseapp\.com)$/i.test(window.location.hostname)
+    if (isFirebaseHosting) {
+      return '/proxy'
+    }
+  }
+
+  // Priority 3: Fallback based on mode
+  const mode = import.meta?.env?.MODE
+  if (mode === 'local') {
+    return 'http://localhost:8787/proxy'
+  }
+  if (mode === 'emulator') {
+    return 'http://localhost:5001/foodsharing-watcher/europe-west3/proxy'
+  }
+  if (mode === 'firebase') {
+    return '/proxy'
+  }
+
+  // Last resort fallback (should not happen if env files are set up correctly)
+  return '/proxy'
+}
+
 export default function App() {
   const [storeId, setStoreId] = useState(() => localStorage.getItem(LS_KEYS.storeId) || '29441,29438')
-  const defaultProxyUrl = (import.meta?.env?.VITE_PROXY_URL)
-    || (typeof window !== 'undefined' && /(?:web\.app|firebaseapp\.com)$/i.test(window.location.hostname) ? '/proxy' : undefined)
-    || 'https://proxy-v64j23y43a-ey.a.run.app/proxy'
-  const [proxyUrl, setProxyUrl] = useState(() => localStorage.getItem(LS_KEYS.proxyUrl) || defaultProxyUrl)
+  const defaultProxyUrl = getDefaultProxyUrl()
+  // Always use environment-based proxy URL (not persisted in localStorage)
+  const [proxyUrl, setProxyUrl] = useState(defaultProxyUrl)
+
+  // Get build mode for display (dev only)
+  const buildMode = import.meta.env.MODE || 'unknown'
+  const envProxyUrl = import.meta.env.VITE_PROXY_URL
+
+  // Debug: Log environment info in development
+  if (import.meta.env.DEV) {
+    console.log('[App] Build mode:', buildMode)
+    console.log('[App] VITE_PROXY_URL:', envProxyUrl)
+    console.log('[App] All env vars:', Object.keys(import.meta.env).filter(k => k.startsWith('VITE_')))
+  }
   const [headersInput, setHeadersInput] = useState(() => localStorage.getItem(LS_KEYS.headers) || '')
   const [pickups, setPickups] = useState([])
   const [loading, setLoading] = useState(false)
@@ -196,7 +245,6 @@ export default function App() {
   }, [storeId, proxyUrl, headersInput])
 
   useEffect(() => localStorage.setItem(LS_KEYS.storeId, storeId), [storeId])
-  useEffect(() => localStorage.setItem(LS_KEYS.proxyUrl, proxyUrl), [proxyUrl])
   useEffect(() => localStorage.setItem(LS_KEYS.headers, headersInput), [headersInput])
 
   useEffect(() => {
@@ -214,7 +262,7 @@ export default function App() {
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">
       <header className="sticky top-0 z-10 bg-white/80 backdrop-blur border-b border-slate-200">
-        <div className="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between gap-4">
+        <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between gap-4">
           <h1 className="text-2xl font-bold">Foodsharing Pickup Watcher</h1>
           <div className="text-sm text-slate-600">
             Next check in <span className="font-semibold">{diffHuman(countdown)}</span>
@@ -222,20 +270,22 @@ export default function App() {
         </div>
       </header>
 
-      <main className="max-w-5xl mx-auto p-4">
-        <section className="mb-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="bg-white rounded-2xl shadow p-4 space-y-3">
-            <div className="flex items-center justify-between">
-              <h2 className="font-semibold">Settings</h2>
-              <button
-                className={`px-3 py-1 rounded-xl border text-sm ${loading ? 'opacity-60' : 'hover:bg-slate-50'}`}
-                onClick={() => load()}
-                disabled={loading}
-                title="Fetch now"
-              >
-                {loading ? 'Loading…' : 'Check now'}
-              </button>
-            </div>
+      <main className="max-w-7xl mx-auto p-4">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          {/* Left column: Settings and Status */}
+          <div className="lg:col-span-1 space-y-4">
+            <div className="bg-white rounded-2xl shadow p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <h2 className="font-semibold">Settings</h2>
+                <button
+                  className={`px-3 py-1 rounded-xl border text-sm ${loading ? 'opacity-60' : 'hover:bg-slate-50'}`}
+                  onClick={() => load()}
+                  disabled={loading}
+                  title="Fetch now"
+                >
+                  {loading ? 'Loading…' : 'Check now'}
+                </button>
+              </div>
             <label className="block text-sm">
               <span className="text-slate-600">Store IDs</span>
               <input
@@ -276,13 +326,30 @@ export default function App() {
               </button>
             </div>
             <label className="block text-sm">
-              <span className="text-slate-600">Proxy URL (optional)</span>
+              <div className="flex items-center justify-between">
+                <span className="text-slate-600">Proxy URL</span>
+                {proxyUrl !== defaultProxyUrl && (
+                  <button
+                    type="button"
+                    onClick={() => setProxyUrl(defaultProxyUrl)}
+                    className="text-xs text-blue-600 hover:text-blue-800 underline"
+                  >
+                    Reset to default
+                  </button>
+                )}
+              </div>
               <input
                 className="mt-1 w-full rounded-xl border px-3 py-2"
                 value={proxyUrl}
                 onChange={e => setProxyUrl(e.target.value)}
-                placeholder="https://proxy-v64j23y43a-ey.a.run.app/proxy (or http://localhost:8787/proxy)"
+                placeholder={defaultProxyUrl || "Proxy URL from environment"}
               />
+              {envProxyUrl && (
+                <span className="text-xs text-slate-500 block mt-1">
+                  Default from env ({buildMode}): <code className="text-xs">{envProxyUrl}</code>
+                  {proxyUrl !== defaultProxyUrl && <span className="ml-2 text-orange-600">(overridden)</span>}
+                </span>
+              )}
             </label>
             <label className="block text-sm">
               <span className="text-slate-600">Extra headers JSON (optional)</span>
@@ -297,42 +364,50 @@ export default function App() {
               Tip: If you use a proxy, only forward the minimum headers required by your endpoint.
               Avoid putting cookies or secrets directly here.
             </p>
-          </div>
+            </div>
 
-          <div className="bg-white rounded-2xl shadow p-4 space-y-2">
-            <h2 className="font-semibold">Status</h2>
-            <div className="text-sm text-slate-700">
-              <div>Endpoint:&nbsp;
-                <code className="text-xs break-all">{targetUrl}</code>
-              </div>
-              {proxyUrl && (
-                <div>Via proxy:&nbsp;
-                  <code className="text-xs break-all">{buildFetchUrl()}</code>
+            <div className="bg-white rounded-2xl shadow p-4 space-y-2">
+              <h2 className="font-semibold">Status</h2>
+              <div className="text-sm text-slate-700">
+                {(import.meta?.env?.DEV || import.meta?.env?.MODE) && (
+                  <div className="mb-2 text-xs text-slate-500">
+                    Build mode: <span className="font-mono font-semibold">{buildMode}</span>
+                    {envProxyUrl && <span className="ml-2">| Env URL: <span className="font-mono">{envProxyUrl}</span></span>}
+                  </div>
+                )}
+                <div>Endpoint:&nbsp;
+                  <code className="text-xs break-all">{targetUrl}</code>
                 </div>
-              )}
-              <div>
-                Last updated: {lastUpdated ? new Intl.DateTimeFormat('de-DE', { dateStyle: 'short', timeStyle: 'medium', timeZone: BERLIN_TZ }).format(lastUpdated) : '—'}
-              </div>
-              <div>Pickups: <span className="font-semibold">{totals.total}</span> ({totals.withFree} with free slots)</div>
-              {error && (
-                <div className="mt-2 rounded-xl border border-red-200 bg-red-50 p-2 text-red-800 text-sm">
-                  Error: {error}
+                {proxyUrl && (
+                  <div>Via proxy:&nbsp;
+                    <code className="text-xs break-all">{buildFetchUrl()}</code>
+                  </div>
+                )}
+                <div>
+                  Last updated: {lastUpdated ? new Intl.DateTimeFormat('de-DE', { dateStyle: 'short', timeStyle: 'medium', timeZone: BERLIN_TZ }).format(lastUpdated) : '—'}
                 </div>
-              )}
+                <div>Pickups: <span className="font-semibold">{totals.total}</span> ({totals.withFree} with free slots)</div>
+                {error && (
+                  <div className="mt-2 rounded-xl border border-red-200 bg-red-50 p-2 text-red-800 text-sm">
+                    Error: {error}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
-        </section>
 
-        <section className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {pickups.length === 0 && !loading && !error && (
-            <div className="text-slate-600">No pickups found.</div>
-          )}
+          {/* Right column: Slots */}
+          <div className="lg:col-span-2">
+            <div className="space-y-4">
+              {pickups.length === 0 && !loading && !error && (
+                <div className="text-slate-600">No pickups found.</div>
+              )}
 
-          {pickups
-            .slice()
-            .filter(p => !showOnlyNotOccupied || (p.occupiedSlots && p.occupiedSlots.length === 0))
-            .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-            .map((p, idx) => {
+              {pickups
+                .slice()
+                .filter(p => !showOnlyNotOccupied || (p.occupiedSlots && p.occupiedSlots.length === 0))
+                .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+                .map((p, idx) => {
               const { free, occupied } = computeAvailability(p)
               const hasFree = (p.isAvailable ?? false) || free > 0
               const isEmpty = p.occupiedSlots && p.occupiedSlots.length === 0
@@ -386,13 +461,15 @@ export default function App() {
                       </ul>
                     </div>
                   )}
-                </article>
-              )
-            })}
-        </section>
+                  </article>
+                )
+              })}
+            </div>
+          </div>
+        </div>
       </main>
 
-      <footer className="max-w-5xl mx-auto px-4 py-8 text-center text-xs text-slate-500">
+      <footer className="max-w-7xl mx-auto px-4 py-8 text-center text-xs text-slate-500">
         Runs hourly (on the hour) and on demand. Times shown in Europe/Berlin.
       </footer>
     </div>

@@ -4,6 +4,9 @@ node_modules/
 # Environment variables and secrets
 .env
 .env.local
+.env.emulator
+.env.firebase
+.secret.local
 
 # Build output
 dist/
