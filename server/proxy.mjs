@@ -119,7 +119,16 @@ app.get('/proxy', async (req, res) => {
 
     // === If 401, try to login and retry once ===
     if (upstream.statusCode === 401) {
-      // Perform login
+      // Perform login using credentials from environment variables
+      // In Firebase Functions: these come from Secret Manager
+      // In emulator/local: these come from .env files
+      const loginEmail = process.env.FOODWATCH_LOGIN_EMAIL
+      const loginPassword = process.env.FOODWATCH_LOGIN_PASSWORD
+
+      if (!loginEmail || !loginPassword) {
+        return res.status(500).json({ error: 'Missing FOODWATCH_LOGIN_EMAIL or FOODWATCH_LOGIN_PASSWORD in environment variables' })
+      }
+
       const loginRes = await request('https://foodsharing.de/api/user/login', {
         method: 'POST',
         headers: {
@@ -127,8 +136,8 @@ app.get('/proxy', async (req, res) => {
           'content-type': 'application/json; charset=UTF-8',
         },
         body: JSON.stringify({
-          email: "alexandr.stoian@gmail.com",
-          password: "niggazz3200",
+          email: loginEmail,
+          password: loginPassword,
           remember_me: true
         }),
       });
