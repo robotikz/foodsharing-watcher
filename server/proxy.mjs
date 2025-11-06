@@ -218,6 +218,10 @@ app.options('/proxy', cors({ origin: true, credentials: false }))
 app.options('/notify-email', cors({ origin: true, credentials: false }))
 
 // Firebase HTTPS Function export
+// Note: All secret variables must be declared here, NOT as regular environment variables
+// If you see "overlaps non secret environment variable" errors, try:
+// 1. Check actual Cloud Run env vars: node scripts/check-env-vars.mjs
+// 2. Explicitly set empty environmentVariables to override any cached config
 export const proxy = onRequest({
   region: 'europe-west3',
   secrets: [
@@ -230,6 +234,8 @@ export const proxy = onRequest({
     'FOODWATCH_NOTIFY_FROM',
     'FOODWATCH_NOTIFY_TO',
   ],
+  // Explicitly set empty to prevent any cached env vars from causing conflicts
+  environmentVariables: {},
 }, app)
 
 // Export app for local runner
