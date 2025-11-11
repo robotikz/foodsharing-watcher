@@ -20,6 +20,7 @@
     "fb:use": "firebase use foodsharing-watcher",
     "secrets:set": "node --env-file=.env scripts/set-secrets.mjs",
     "secrets:set:local": "node --env-file=.env.local scripts/set-secrets.mjs",
+    "secrets:set:secret": "node --env-file=.secret.local scripts/set-secrets.mjs",
     "check:env-vars": "node scripts/check-env-vars.mjs",
     "clear:env-vars": "node scripts/clear-env-vars.mjs",
     "deploy:functions": "firebase deploy --only functions:proxy --project foodsharing-watcher",
