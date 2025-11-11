@@ -7,6 +7,17 @@ const LS_KEYS = {
 }
 const BERLIN_TZ = 'Europe/Berlin'
 
+// Store ID to name mapping
+const STORE_NAMES = {
+  '29438': 'Kirchen',
+  '29441': 'Wissen',
+}
+
+function getStoreName(storeId) {
+  if (!storeId) return null
+  return STORE_NAMES[String(storeId)] || `Store ${storeId}`
+}
+
 function fmtDate(iso) {
   try {
     const d = new Date(iso)
@@ -119,8 +130,7 @@ export default function App() {
   const [lastUpdated, setLastUpdated] = useState(null)
   const [countdown, setCountdown] = useState(msUntilNextTopOfHour())
   const [showOnlyNotOccupied, setShowOnlyNotOccupied] = useState(true)
-  const [settingsCollapsed, setSettingsCollapsed] = useState(true)
-  const [statusCollapsed, setStatusCollapsed] = useState(true)
+  const [leftColumnCollapsed, setLeftColumnCollapsed] = useState(true)
   const countdownRef = useRef(null)
   const intervalRef = useRef(null)
   // Persisted free pickup keys for new free notification
@@ -171,8 +181,13 @@ export default function App() {
       if (Array.isArray(data?.pickups)) {
         list = data.pickups;
       } else if (data.multi && Array.isArray(data.results)) {
-        // Aggregate pickups arrays from all responses
-        list = data.results.flatMap(x => Array.isArray(x.pickups) ? x.pickups : [])
+        // Aggregate pickups arrays from all responses, preserving storeId
+        list = data.results.flatMap(result => {
+          const storeId = result.storeId
+          const pickups = Array.isArray(result.pickups) ? result.pickups : []
+          // Add storeId to each pickup if not already present
+          return pickups.map(p => ({ ...p, storeId: p.storeId || storeId }))
+        })
       }
       setPickups(list)
       setLastUpdated(new Date())
@@ -265,7 +280,24 @@ export default function App() {
     <div className="min-h-screen bg-slate-50 text-slate-900">
       <header className="sticky top-0 z-10 bg-white/80 backdrop-blur border-b border-slate-200">
         <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between gap-4">
-          <h1 className="text-2xl font-bold">Foodsharing Pickup Watcher</h1>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setLeftColumnCollapsed(!leftColumnCollapsed)}
+              className="p-2 rounded-lg hover:bg-slate-100 transition-colors"
+              title={leftColumnCollapsed ? "Show settings" : "Hide settings"}
+              aria-label={leftColumnCollapsed ? "Show settings" : "Hide settings"}
+            >
+              <svg
+                className={`w-5 h-5 transition-transform ${leftColumnCollapsed ? '' : 'rotate-180'}`}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
+            <h1 className="text-2xl font-bold">Foodsharing Pickup Watcher</h1>
+          </div>
           <div className="text-sm text-slate-600">
             Nächste Prüfung in <span className="font-semibold">{diffHuman(countdown)}</span>
           </div>
@@ -275,98 +307,99 @@ export default function App() {
       <main className="max-w-7xl mx-auto p-4">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           {/* Left column: Settings and Status */}
-          <div className="lg:col-span-1 space-y-4">
-            <div className="bg-white rounded-2xl shadow p-4 space-y-3">
-              <div className="flex items-center justify-between">
-                <h2 className="font-semibold">Settings</h2>
-                <button
-                  className={`px-3 py-1 rounded-xl border text-sm ${loading ? 'opacity-60' : 'hover:bg-slate-50'}`}
-                  onClick={() => load()}
-                  disabled={loading}
-                  title="Fetch now"
-                >
-                  {loading ? 'Loading…' : 'Check now'}
-                </button>
-              </div>
-            <label className="block text-sm">
-              <span className="text-slate-600">Laden-IDs</span>
-              <input
-                className="mt-1 w-full rounded-xl border px-3 py-2"
-                value={storeId}
-                onChange={e => setStoreId(e.target.value)}
-                inputMode="text"
-                placeholder="z.B. 29441,29438"
-              />
-              <span className="text-xs text-slate-500">Durch Komma getrennt. Beispiel: 29441,29438</span>
-            </label>
-            <div className="flex items-center gap-2 mt-2">
-              <button
-                type="button"
-                className={`px-3 py-1 rounded-xl border text-sm transition ${showOnlyNotOccupied ? 'bg-green-700 text-white border-green-700' : 'bg-white hover:bg-slate-50 border-slate-300 text-slate-800'}`}
-                onClick={() => setShowOnlyNotOccupied(s => !s)}
-              >
-                {showOnlyNotOccupied ? 'Alle Slots anzeigen' : 'Nur freie Slots anzeigen'}
-              </button>
-              <button
-                type="button"
-                className="px-3 py-1 rounded-xl border text-sm hover:bg-slate-50 border-slate-300 text-slate-800"
-                onClick={() => {
-                  if ('Notification' in window) {
-                    if (Notification.permission === 'granted') {
-                      new Notification('Test-Benachrichtigung: Foodsharing Abholungs-Beobachter')
-                    } else if (Notification.permission === 'default') {
-                      Notification.requestPermission().then(p => {
-                        if (p === 'granted') {
-                          new Notification('Test-Benachrichtigung: Foodsharing Abholungs-Beobachter')
-                        }
-                      })
-                    }
-                  }
-                }}
-              >
-                Push-Benachrichtigung testen
-              </button>
-            </div>
-            <label className="block text-sm">
-              <div className="flex items-center justify-between">
-                <span className="text-slate-600">Proxy URL</span>
-                {proxyUrl !== defaultProxyUrl && (
+          <div className={`lg:col-span-1 transition-all duration-300 ${leftColumnCollapsed ? 'lg:col-span-0 lg:w-0 lg:overflow-hidden' : ''}`}>
+            <div className={`space-y-4 ${leftColumnCollapsed ? 'hidden' : ''}`}>
+              <div className="bg-white rounded-2xl shadow p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <h2 className="font-semibold">Settings</h2>
+                  <button
+                    className={`px-3 py-1 rounded-xl border text-sm ${loading ? 'opacity-60' : 'hover:bg-slate-50'}`}
+                    onClick={() => load()}
+                    disabled={loading}
+                    title="Fetch now"
+                  >
+                    {loading ? 'Loading…' : 'Check now'}
+                  </button>
+                </div>
+                <label className="block text-sm">
+                  <span className="text-slate-600">Laden-IDs</span>
+                  <input
+                    className="mt-1 w-full rounded-xl border px-3 py-2"
+                    value={storeId}
+                    onChange={e => setStoreId(e.target.value)}
+                    inputMode="text"
+                    placeholder="z.B. 29441,29438"
+                  />
+                  <span className="text-xs text-slate-500">Durch Komma getrennt. Beispiel: 29441,29438</span>
+                </label>
+                <div className="flex items-center gap-2 mt-2">
                   <button
                     type="button"
-                    onClick={() => setProxyUrl(defaultProxyUrl)}
-                    className="text-xs text-blue-600 hover:text-blue-800 underline"
+                    className={`px-3 py-1 rounded-xl border text-sm transition ${showOnlyNotOccupied ? 'bg-green-700 text-white border-green-700' : 'bg-white hover:bg-slate-50 border-slate-300 text-slate-800'}`}
+                    onClick={() => setShowOnlyNotOccupied(s => !s)}
                   >
-                    Reset to default
+                    {showOnlyNotOccupied ? 'Alle Slots anzeigen' : 'Nur freie Slots anzeigen'}
                   </button>
-                )}
+                  <button
+                    type="button"
+                    className="px-3 py-1 rounded-xl border text-sm hover:bg-slate-50 border-slate-300 text-slate-800"
+                    onClick={() => {
+                      if ('Notification' in window) {
+                        if (Notification.permission === 'granted') {
+                          new Notification('Test-Benachrichtigung: Foodsharing Abholungs-Beobachter')
+                        } else if (Notification.permission === 'default') {
+                          Notification.requestPermission().then(p => {
+                            if (p === 'granted') {
+                              new Notification('Test-Benachrichtigung: Foodsharing Abholungs-Beobachter')
+                            }
+                          })
+                        }
+                      }
+                    }}
+                  >
+                    Push-Benachrichtigung testen
+                  </button>
+                </div>
+                <label className="block text-sm">
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-600">Proxy URL</span>
+                    {proxyUrl !== defaultProxyUrl && (
+                      <button
+                        type="button"
+                        onClick={() => setProxyUrl(defaultProxyUrl)}
+                        className="text-xs text-blue-600 hover:text-blue-800 underline"
+                      >
+                        Reset to default
+                      </button>
+                    )}
+                  </div>
+                  <input
+                    className="mt-1 w-full rounded-xl border px-3 py-2"
+                    value={proxyUrl}
+                    onChange={e => setProxyUrl(e.target.value)}
+                    placeholder={defaultProxyUrl || "Proxy URL from environment"}
+                  />
+                  {envProxyUrl && (
+                    <span className="text-xs text-slate-500 block mt-1">
+                      Default from env ({buildMode}): <code className="text-xs">{envProxyUrl}</code>
+                      {proxyUrl !== defaultProxyUrl && <span className="ml-2 text-orange-600">(overridden)</span>}
+                    </span>
+                  )}
+                </label>
+                <label className="block text-sm">
+                  <span className="text-slate-600">Zusätzliche Header JSON (optional)</span>
+                  <textarea
+                    className="mt-1 w-full rounded-xl border px-3 py-2 font-mono text-xs h-28"
+                    value={headersInput}
+                    onChange={e => setHeadersInput(e.target.value)}
+                    placeholder='{"accept":"application/json"}'
+                  />
+                </label>
+                <p className="text-xs text-slate-500">
+                  Tipp: Wenn Sie einen Proxy verwenden, leiten Sie nur die mindestens erforderlichen Header weiter.
+                  Vermeiden Sie, Cookies oder Geheimnisse direkt hier einzufügen.
+                </p>
               </div>
-              <input
-                className="mt-1 w-full rounded-xl border px-3 py-2"
-                value={proxyUrl}
-                onChange={e => setProxyUrl(e.target.value)}
-                placeholder={defaultProxyUrl || "Proxy URL from environment"}
-              />
-              {envProxyUrl && (
-                <span className="text-xs text-slate-500 block mt-1">
-                  Default from env ({buildMode}): <code className="text-xs">{envProxyUrl}</code>
-                  {proxyUrl !== defaultProxyUrl && <span className="ml-2 text-orange-600">(overridden)</span>}
-                </span>
-              )}
-            </label>
-            <label className="block text-sm">
-              <span className="text-slate-600">Zusätzliche Header JSON (optional)</span>
-              <textarea
-                className="mt-1 w-full rounded-xl border px-3 py-2 font-mono text-xs h-28"
-                value={headersInput}
-                onChange={e => setHeadersInput(e.target.value)}
-                placeholder='{"accept":"application/json"}'
-              />
-            </label>
-            <p className="text-xs text-slate-500">
-              Tipp: Wenn Sie einen Proxy verwenden, leiten Sie nur die mindestens erforderlichen Header weiter.
-              Vermeiden Sie, Cookies oder Geheimnisse direkt hier einzufügen.
-            </p>
-            </div>
 
             <div className="bg-white rounded-2xl shadow p-4 space-y-2">
               <h2 className="font-semibold">Status</h2>
@@ -397,9 +430,10 @@ export default function App() {
               </div>
             </div>
           </div>
+          </div>
 
           {/* Right column: Slots */}
-          <div className="lg:col-span-2">
+          <div className={`transition-all duration-300 ${leftColumnCollapsed ? 'lg:col-span-3' : 'lg:col-span-2'}`}>
             <div className="space-y-4">
               {pickups.length === 0 && !loading && !error && (
                 <div className="text-slate-600">No pickups found.</div>
@@ -431,7 +465,14 @@ export default function App() {
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <h3 className="text-lg font-semibold">{fmtDate(p.date)}</h3>
-                      <p className="text-sm text-slate-600">{p.description || 'Abholung'}</p>
+                      <p className="text-sm text-slate-600">
+                        {p.description || 'Abholung'}
+                        {p.storeId && (
+                          <span className="ml-2 text-xs text-slate-500">
+                            ({getStoreName(p.storeId)})
+                          </span>
+                        )}
+                      </p>
                     </div>
                     <div className={`px-3 py-1 rounded-full text-sm font-medium ${hasFree ? 'bg-green-100 text-green-800' : 'bg-slate-100 text-slate-700'}`}>
                       {hasFree ? `Frei: ${free}` : 'Vollständig gebucht'}
