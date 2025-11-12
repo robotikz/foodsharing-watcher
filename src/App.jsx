@@ -298,8 +298,22 @@ export default function App() {
             </button>
             <h1 className="text-2xl font-bold">Foodsharing Pickup Watcher</h1>
           </div>
-          <div className="text-sm text-slate-600">
-            Nächste Prüfung in <span className="font-semibold">{diffHuman(countdown)}</span>
+          <div className="flex items-center gap-3 text-sm text-slate-600">
+            <span>
+              Nächste Prüfung in <span className="font-semibold">{diffHuman(countdown)}</span>
+            </span>
+            <button
+              onClick={() => load()}
+              disabled={loading}
+              className={`px-3 py-1.5 rounded-lg border border-slate-300 text-sm transition-colors ${
+                loading
+                  ? 'opacity-60 cursor-not-allowed bg-slate-100'
+                  : 'hover:bg-slate-100 hover:border-slate-400 bg-white'
+              }`}
+              title="Jetzt prüfen"
+            >
+              {loading ? 'Prüfe...' : 'Noch mal prüfen'}
+            </button>
           </div>
         </div>
       </header>
